@@ -430,7 +430,7 @@ def create(vm_):
         if six.text_type(data.get('server_state', '')) == 'installingbooting':
             nonlocal install_timeout
             install_timeout -= 1
-            log.error('Install delay: %s seconds remaining', install_timeout)
+            log.debug('Install delay: %s seconds remaining', install_timeout)
             if install_timeout == 0:
                 return data['default_password']
 
