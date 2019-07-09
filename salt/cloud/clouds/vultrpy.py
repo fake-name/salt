@@ -410,6 +410,10 @@ def create(vm_):
             return False
         return data['default_password']
 
+    # Maximum delay if we don't see the server
+    # reach the 'ok' state.
+    install_timeout = 60 * 5
+
     def wait_for_server_state():
         '''
         Wait for the IP address to become available
@@ -417,10 +421,21 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for server state ok")
         # pprint.pprint(data)
-        if six.text_type(data.get('server_state', '')) != 'ok':
-            time.sleep(1)
-            return False
-        return data['default_password']
+
+        # So vultr somehow sits in the 'installingbooting' state for many, MANY minutes after
+        # the install has actually finished. I think it might be just a timer somewhere.
+        if six.text_type(data.get('server_state', '')) == 'ok':
+            return data['default_password']
+
+        if six.text_type(data.get('server_state', '')) == 'installingbooting':
+            nonlocal install_timeout
+            install_timeout -= 1
+            log.error('Install delay: %s seconds remaining', install_timeout)
+            if install_timeout == 0:
+                return data['default_password']
+
+        time.sleep(1)
+        return False
 
     vm_['ssh_host'] = __utils__['cloud.wait_for_fun'](
         wait_for_hostname,
